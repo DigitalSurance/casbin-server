@@ -17,10 +17,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
 	pb "github.com/casbin/casbin-server/proto"
 	"github.com/casbin/casbin-server/server"
@@ -30,7 +32,9 @@ import (
 
 func main() {
 	var port int
-	flag.IntVar(&port, "port", 50051, "listening port")
+	var jsonPort int
+	flag.IntVar(&port, "port", 50051, "grpc listening port")
+	flag.IntVar(&jsonPort, "json-port", 50052, "json http api listening port")
 	flag.Parse()
 
 	if port < 1 || port > 65535 {
@@ -42,7 +46,30 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterCasbinServer(s, server.NewServer())
+
+	casbinServer := server.NewServer()
+	// request postgres adapter
+	// adapterRequest := &pb.NewAdapterRequest{
+	// 	DriverName:    "postgres",
+	// 	ConnectString: "host=localhost port=5432 user=postgres password=postgres dbname=postgres sslmode=disable",
+	// }
+	response, err := casbinServer.NewAdapter(context.TODO(), &pb.NewAdapterRequest{})
+	if err != nil {
+		panic(err)
+	}
+	casbinServer.NewEnforcer(context.TODO(), &pb.NewEnforcerRequest{ModelText: "", AdapterHandle: response.Handler})
+
+	pb.RegisterCasbinServer(s, casbinServer)
+
+	// spin up json/rest server to handle relation-tuple/check requests by oathkeeper
+	jsonServer := server.NewJsonServer(casbinServer)
+	go func() {
+		http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", jsonPort), jsonServer)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	log.Println("Listening on", port)
