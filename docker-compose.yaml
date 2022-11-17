@@ -1,6 +1,24 @@
 version: '3.5'
 
 services:
+  casbin-server:
+    container_name: casbin_server
+    image: ds-casbin-server
+    environment:
+      - CONNECTION_CONFIG_PATH=./connection_config.json
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=casbin
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+    ports:
+      - "50051:50051"
+      - "50052:50052"
+    networks:
+      - postgres
+    depends_on:
+      - postgres
+
   postgres:
     container_name: postgres_container
     image: postgres
@@ -15,6 +33,7 @@ services:
     networks:
       - postgres
     restart: unless-stopped
+
   pgadmin:
     container_name: pgadmin_container
     image: dpage/pgadmin4
