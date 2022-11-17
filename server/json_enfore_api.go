@@ -23,6 +23,7 @@ func NewJsonServer(casbinServer *Server) *JsonServer {
 	}
 
 	// middlewares
+	server.router.Use(middleware.Logger)
 	server.router.Use(middleware.AllowContentType("application/json"))
 
 	// routes
