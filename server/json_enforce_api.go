@@ -45,7 +45,7 @@ type RelationTuple struct {
 }
 
 func (s *JsonServer) attachRoutes() {
-	s.router.Post("/relation-tuple/check", s.handleRelationTupleCheck)
+	s.router.Post("/relation-tuples/check", s.handleRelationTupleCheck)
 }
 
 func (s *JsonServer) handleRelationTupleCheck(rw http.ResponseWriter, r *http.Request) {
