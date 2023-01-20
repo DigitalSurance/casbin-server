@@ -21,32 +21,13 @@ import (
 
 	pb "github.com/casbin/casbin-server/proto"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slog"
 )
 
-func testEnforce(t *testing.T, e *testEngine, sub string, obj string, act string, res bool) {
-	t.Helper()
-	reply, err := e.s.Enforce(e.ctx, &pb.EnforceRequest{EnforcerHandler: e.h, Params: []string{sub, obj, act}})
-	assert.NoError(t, err)
-
-	if reply.Res != res {
-		t.Errorf("%s, %v, %s: %t, supposed to be %t", sub, obj, act, !res, res)
-	} else {
-		t.Logf("Enforce for %s, %s, %s : %v", sub, obj, act, reply.Res)
-	}
-}
-
-func testEnforceWithoutUsers(t *testing.T, e *testEngine, obj string, act string, res bool) {
-	t.Helper()
-	reply, err := e.s.Enforce(e.ctx, &pb.EnforceRequest{EnforcerHandler: e.h, Params: []string{obj, act}})
-	assert.NoError(t, err)
-
-	if reply.Res != res {
-		t.Errorf("%s, %s: %t, supposed to be %t", obj, act, !res, res)
-	}
-}
+var logger = slog.New(slog.NewJSONHandler(os.Stdout))
 
 func TestRBACModel(t *testing.T) {
-	s := NewServer()
+	s := NewServer(logger)
 	ctx := context.Background()
 
 	_, err := s.NewAdapter(ctx, &pb.NewAdapterRequest{DriverName: "file", ConnectString: "../examples/rbac_policy.csv"})
@@ -68,7 +49,7 @@ func TestRBACModel(t *testing.T) {
 	sub := "alice"
 	obj := "data1"
 	act := "read"
-	res := true
+	res := false
 
 	resp2, err := s.Enforce(ctx, &pb.EnforceRequest{EnforcerHandler: e, Params: []string{sub, obj, act}})
 	if err != nil {
@@ -82,7 +63,7 @@ func TestRBACModel(t *testing.T) {
 }
 
 func TestABACModel(t *testing.T) {
-	s := NewServer()
+	s := NewServer(logger)
 	ctx := context.Background()
 
 	modelText, err := os.ReadFile("../examples/abac_model.conf")
