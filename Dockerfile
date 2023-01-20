@@ -1,4 +1,4 @@
-FROM golang:1.16 AS builder
+FROM golang:1.19.3 AS builder
 WORKDIR /app
 COPY . .
 RUN CGO_ENABLED=0 go build -o start-casbin-server

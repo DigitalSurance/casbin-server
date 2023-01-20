@@ -10,6 +10,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/stretchr/testify v1.8.1
+	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157
 	golang.org/x/net v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20230119192704-9d59e20e5cd1 // indirect
 	google.golang.org/grpc v1.52.0
