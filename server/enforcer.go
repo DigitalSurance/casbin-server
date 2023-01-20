@@ -17,7 +17,7 @@ package server
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 
@@ -25,6 +25,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	"github.com/casbin/casbin/v2/persist"
+	"golang.org/x/exp/slog"
 )
 
 // Server is used to implement proto.CasbinServer.
@@ -33,13 +34,15 @@ type Server struct {
 	adapterMap  map[int]persist.Adapter
 	muE         sync.RWMutex
 	muA         sync.RWMutex
+	logger      *slog.Logger
 }
 
-func NewServer() *Server {
+func NewServer(logger *slog.Logger) *Server {
 	s := Server{}
 
 	s.enforcerMap = map[int]*casbin.Enforcer{}
 	s.adapterMap = map[int]persist.Adapter{}
+	s.logger = logger
 
 	return &s
 }
@@ -98,7 +101,7 @@ func (s *Server) NewEnforcer(ctx context.Context, in *pb.NewEnforcerRequest) (*p
 
 	if in.ModelText == "" {
 		cfg := LoadConfiguration(getLocalConfigPath())
-		data, err := ioutil.ReadFile(cfg.Enforcer)
+		data, err := os.ReadFile(cfg.Enforcer)
 		if err != nil {
 			return &pb.NewEnforcerReply{Handler: 0}, err
 		}
@@ -161,6 +164,8 @@ func (s *Server) parseParam(param, matcher string) (interface{}, string) {
 }
 
 func (s *Server) Enforce(ctx context.Context, in *pb.EnforceRequest) (*pb.BoolReply, error) {
+	s.logger.Debug("Enforce", slog.String("in", in.String()))
+
 	e, err := s.getEnforcer(int(in.EnforcerHandler))
 	if err != nil {
 		return &pb.BoolReply{Res: false}, err
@@ -176,9 +181,11 @@ func (s *Server) Enforce(ctx context.Context, in *pb.EnforceRequest) (*pb.BoolRe
 
 	res, err := e.EnforceWithMatcher(m, params...)
 	if err != nil {
+		s.logger.Debug("Enforce returned for 'in' returned false", slog.String("in", in.String()), slog.Bool("res", res))
 		return &pb.BoolReply{Res: false}, err
 	}
 
+	s.logger.Debug("Enforce returned for 'in' returned true", slog.String("in", in.String()), slog.Bool("res", res))
 	return &pb.BoolReply{Res: res}, nil
 }
 

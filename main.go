@@ -20,34 +20,42 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
+	"os"
 
 	pb "github.com/casbin/casbin-server/proto"
 	"github.com/casbin/casbin-server/server"
+	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
+	options := slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	handler := options.NewJSONHandler(os.Stdout)
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
 	var port int
 	var jsonPort int
 	flag.IntVar(&port, "port", 50051, "grpc listening port")
 	flag.IntVar(&jsonPort, "json-port", 50052, "json http api listening port")
 	flag.Parse()
 
+	// if port not in range or we can't listen on it, panic and exit
 	if port < 1 || port > 65535 {
 		panic(fmt.Sprintf("invalid port number: %d", port))
 	}
-
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		panic(fmt.Sprintf("failed to listen: %v", err))
 	}
 	s := grpc.NewServer()
 
-	casbinServer := server.NewServer()
+	casbinServer := server.NewServer(logger)
 	response, err := casbinServer.NewAdapter(context.TODO(), &pb.NewAdapterRequest{})
 	if err != nil {
 		panic(err)
@@ -59,7 +67,7 @@ func main() {
 	// spin up json/rest server to handle relation-tuple/check requests by oathkeeper
 	jsonServer := server.NewJsonServer(casbinServer)
 	go func() {
-		log.Println("json server listening on port", jsonPort)
+		logger.Info(fmt.Sprintf("json server listening on port: %d", jsonPort))
 		http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", jsonPort), jsonServer)
 		if err != nil {
 			panic(err)
@@ -68,8 +76,9 @@ func main() {
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
-	log.Println("grpc server listening on", port)
+	logger.Info(fmt.Sprintf("grpc server listening on port: %d", port))
+	// if we can't serve, panic and exit
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		panic(fmt.Sprintf("failed to serve: %v", err))
 	}
 }
