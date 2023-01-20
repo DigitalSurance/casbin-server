@@ -165,6 +165,7 @@ func (s *Server) parseParam(param, matcher string) (interface{}, string) {
 
 func (s *Server) Enforce(ctx context.Context, in *pb.EnforceRequest) (*pb.BoolReply, error) {
 	s.logger.Debug("Enforce", slog.String("in", in.String()))
+	casbinEnforceAll.Inc()
 
 	e, err := s.getEnforcer(int(in.EnforcerHandler))
 	if err != nil {
@@ -182,10 +183,12 @@ func (s *Server) Enforce(ctx context.Context, in *pb.EnforceRequest) (*pb.BoolRe
 	res, err := e.EnforceWithMatcher(m, params...)
 	if err != nil {
 		s.logger.Debug("Enforce returned for 'in' returned false", slog.String("in", in.String()), slog.Bool("res", res))
+		casbinEnforceAccessDenied.Inc()
 		return &pb.BoolReply{Res: false}, err
 	}
 
 	s.logger.Debug("Enforce returned for 'in' returned true", slog.String("in", in.String()), slog.Bool("res", res))
+	casbinEnforceAccessApproved.Inc()
 	return &pb.BoolReply{Res: res}, nil
 }
 

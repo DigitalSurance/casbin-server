@@ -45,7 +45,7 @@ func main() {
 	flag.IntVar(&jsonPort, "json-port", 50052, "json http api listening port")
 	flag.Parse()
 
-	// if port not in range or we can't listen on it, panic and exit
+	// if port not in range, or we can't listen on it, panic and exit
 	if port < 1 || port > 65535 {
 		panic(fmt.Sprintf("invalid port number: %d", port))
 	}
