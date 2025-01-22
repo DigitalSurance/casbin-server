@@ -16,7 +16,8 @@ package server
 
 import (
 	"context"
-	"io/ioutil"
+	"log/slog"
+	"os"
 	"testing"
 
 	pb "github.com/casbin/casbin-server/proto"
@@ -29,7 +30,12 @@ type testEngine struct {
 }
 
 func newTestEngine(t *testing.T, from, connectStr string, modelLoc string) *testEngine {
-	s := NewServer()
+	options := slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}
+	handler := slog.NewJSONHandler(os.Stdout, &options)
+	logger := slog.New(handler)
+	s := NewServer(logger)
 	ctx := context.Background()
 
 	_, err := s.NewAdapter(ctx, &pb.NewAdapterRequest{DriverName: from, ConnectString: connectStr})
@@ -37,7 +43,7 @@ func newTestEngine(t *testing.T, from, connectStr string, modelLoc string) *test
 		t.Fatal(err)
 	}
 
-	modelText, err := ioutil.ReadFile(modelLoc)
+	modelText, err := os.ReadFile(modelLoc)
 	if err != nil {
 		t.Fatal(err)
 	}

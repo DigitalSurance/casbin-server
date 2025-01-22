@@ -16,21 +16,42 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"testing"
 
 	pb "github.com/casbin/casbin-server/proto"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slog"
 )
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout))
+func testEnforce(t *testing.T, e *testEngine, sub string, obj string, act string, res bool) {
+	t.Helper()
+	reply, err := e.s.Enforce(e.ctx, &pb.EnforceRequest{EnforcerHandler: e.h, Params: []string{sub, obj, act}})
+	assert.NoError(t, err)
+
+	if reply.Res != res {
+		t.Errorf("%s, %v, %s: %t, supposed to be %t", sub, obj, act, !res, res)
+	} else {
+		t.Logf("Enforce for %s, %s, %s : %v", sub, obj, act, reply.Res)
+	}
+}
+
+func testEnforceWithoutUsers(t *testing.T, e *testEngine, obj string, act string, res bool) {
+	t.Helper()
+	reply, err := e.s.Enforce(e.ctx, &pb.EnforceRequest{EnforcerHandler: e.h, Params: []string{obj, act}})
+	assert.NoError(t, err)
+
+	if reply.Res != res {
+		t.Errorf("%s, %s: %t, supposed to be %t", obj, act, !res, res)
+	}
+}
 
 func TestRBACModel(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	s := NewServer(logger)
 	ctx := context.Background()
 
-	_, err := s.NewAdapter(ctx, &pb.NewAdapterRequest{DriverName: "file", ConnectString: "../examples/rbac_policy.csv"})
+	_, err := s.NewAdapter(ctx, &pb.NewAdapterRequest{DriverName: "file", ConnectString: "../examples/rbac_policy_test.csv"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -49,7 +70,7 @@ func TestRBACModel(t *testing.T) {
 	sub := "alice"
 	obj := "data1"
 	act := "read"
-	res := false
+	res := true
 
 	resp2, err := s.Enforce(ctx, &pb.EnforceRequest{EnforcerHandler: e, Params: []string{sub, obj, act}})
 	if err != nil {
@@ -63,6 +84,7 @@ func TestRBACModel(t *testing.T) {
 }
 
 func TestABACModel(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	s := NewServer(logger)
 	ctx := context.Background()
 

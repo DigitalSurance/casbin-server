@@ -20,13 +20,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 
 	pb "github.com/casbin/casbin-server/proto"
 	"github.com/casbin/casbin-server/server"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -35,7 +35,7 @@ func main() {
 	options := slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}
-	handler := options.NewJSONHandler(os.Stdout)
+	handler := slog.NewJSONHandler(os.Stdout, &options)
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 

@@ -71,7 +71,7 @@ func testHasRole(t *testing.T, e *testEngine, name string, role string, res bool
 }
 
 func TestRoleAPI(t *testing.T) {
-	e := newTestEngine(t, "file", "../examples/rbac_policy.csv", "../examples/rbac_model.conf")
+	e := newTestEngine(t, "file", "../examples/rbac_policy_test.csv", "../examples/rbac_model.conf")
 
 	testGetRoles(t, e, "alice", []string{"data2_admin"})
 	testGetRoles(t, e, "bob", []string{})

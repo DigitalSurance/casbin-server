@@ -17,6 +17,7 @@ package server
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -25,7 +26,6 @@ import (
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	"github.com/casbin/casbin/v2/persist"
-	"golang.org/x/exp/slog"
 )
 
 // Server is used to implement proto.CasbinServer.
