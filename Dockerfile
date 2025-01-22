@@ -1,37 +1,4 @@
-FROM golang:1.19 as BACK
-
-RUN apt-get update && \
-    apt-get -y install unzip build-essential autoconf libtool
-
-WORKDIR /go/src
-COPY . .
-
-# Install protobuf from source
-RUN curl -LjO https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.17.3.zip && \
-    unzip v3.17.3.zip && \
-    cd protobuf-3.17.3 && \
-    ./autogen.sh && \
-    ./configure && \
-    make && \
-    make install && \
-    ldconfig && \
-    make clean && \
-    cd .. && \
-    rm -r protobuf-3.17.3 && \
-    rm v3.17.3.zip
-
-# Go environment variable to enable Go modules
-ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
-
-# Download dependencies
-RUN go mod download
-
-# Install protoc-gen-go
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+FROM casbin-builder:0.0.0 AS builder
 
 # Copy the source and generate the .proto file
 ADD . /go/src/github.com/casbin/casbin-server
@@ -45,9 +12,12 @@ RUN go install .
 
 RUN cd /go/src && go build -o casbin-server
 
-FROM alpine:latest as STANDARD
+FROM alpine:latest
 WORKDIR /app
-COPY --from=BACK /go/src/casbin-server /app/
+COPY --from=builder /go/src/casbin-server /app/
+COPY ./config/connection_for_docker.json ./connection_config.json
+COPY ./examples/rbac_model.conf ./rbac_model.conf
+
+EXPOSE 50051 50052
 ENTRYPOINT ./casbin-server
 
-EXPOSE 50051
