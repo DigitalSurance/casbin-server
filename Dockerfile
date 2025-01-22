@@ -1,4 +1,4 @@
-FROM casbin-builder:0.0.0 AS builder
+FROM pmate6/casbin-builder:0.0.0 AS builder
 
 # Copy the source and generate the .proto file
 ADD . /go/src/github.com/casbin/casbin-server
