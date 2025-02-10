@@ -30,7 +30,7 @@ import (
 
 // Server is used to implement proto.CasbinServer.
 type Server struct {
-	enforcerMap map[int]*casbin.Enforcer
+	enforcerMap map[int]*casbin.SyncedEnforcer
 	adapterMap  map[int]persist.Adapter
 	muE         sync.RWMutex
 	muA         sync.RWMutex
@@ -40,14 +40,14 @@ type Server struct {
 func NewServer(logger *slog.Logger) *Server {
 	s := Server{}
 
-	s.enforcerMap = map[int]*casbin.Enforcer{}
+	s.enforcerMap = map[int]*casbin.SyncedEnforcer{}
 	s.adapterMap = map[int]persist.Adapter{}
 	s.logger = logger
 
 	return &s
 }
 
-func (s *Server) getEnforcer(handle int) (*casbin.Enforcer, error) {
+func (s *Server) getEnforcer(handle int) (*casbin.SyncedEnforcer, error) {
 	s.muE.RLock()
 	defer s.muE.RUnlock()
 
@@ -69,7 +69,7 @@ func (s *Server) getAdapter(handle int) (persist.Adapter, error) {
 	}
 }
 
-func (s *Server) addEnforcer(e *casbin.Enforcer) int {
+func (s *Server) addEnforcer(e *casbin.SyncedEnforcer) int {
 	s.muE.Lock()
 	defer s.muE.Unlock()
 
@@ -89,7 +89,7 @@ func (s *Server) addAdapter(a persist.Adapter) int {
 
 func (s *Server) NewEnforcer(ctx context.Context, in *pb.NewEnforcerRequest) (*pb.NewEnforcerReply, error) {
 	var a persist.Adapter
-	var e *casbin.Enforcer
+	var e *casbin.SyncedEnforcer
 
 	if in.AdapterHandle != -1 {
 		var err error
@@ -114,7 +114,7 @@ func (s *Server) NewEnforcer(ctx context.Context, in *pb.NewEnforcerRequest) (*p
 			return &pb.NewEnforcerReply{Handler: 0}, err
 		}
 
-		e, err = casbin.NewEnforcer(m, false)
+		e, err = casbin.NewSyncedEnforcer(m, false)
 		if err != nil {
 			return &pb.NewEnforcerReply{Handler: 0}, err
 		}
@@ -124,7 +124,7 @@ func (s *Server) NewEnforcer(ctx context.Context, in *pb.NewEnforcerRequest) (*p
 			return &pb.NewEnforcerReply{Handler: 0}, err
 		}
 
-		e, err = casbin.NewEnforcer(m, a)
+		e, err = casbin.NewSyncedEnforcer(m, a)
 		if err != nil {
 			return &pb.NewEnforcerReply{Handler: 0}, err
 		}

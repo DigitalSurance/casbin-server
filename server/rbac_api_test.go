@@ -15,6 +15,8 @@
 package server
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	pb "github.com/casbin/casbin-server/proto"
@@ -68,6 +70,26 @@ func testHasRole(t *testing.T, e *testEngine, name string, role string, res bool
 	if res != reply.Res {
 		t.Error(name, " has role ", role, ": ", reply.Res, ", supposed to be ", res)
 	}
+}
+
+func TestRoleAPIWithManyAddRoleCalls(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	e := newTestEngine(t, "file", "../examples/rbac_policy_test.csv", "../examples/rbac_model.conf")
+	for i := range 1000 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := e.s.AddRoleForUser(e.ctx, &pb.UserRoleRequest{
+				EnforcerHandler: e.h,
+				User:            fmt.Sprintf("alice%d", i),
+				Role:            fmt.Sprintf("data1_admin%d", i),
+			})
+			if err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func TestRoleAPI(t *testing.T) {
